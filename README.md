@@ -1,5 +1,7 @@
 ## Database composer
 
+This repo is used to create a random dataset for training our Machine Learning model.
+
 I could not find an example dataset with the fields I need. So I am using a few datasets to create the one I want.
 
 ### Application
