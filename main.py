@@ -4,7 +4,7 @@ import requests
 import random
 
 def generate_random_sentence():
-    words = ["apple", "banana", "cat", "dog", "elephant", "frog", "giraffe", "horse", "iguana", "jellyfish", "kangaroo", "lion", "monkey", "noodle", "octopus", "penguin", "quail", "rabbit", "snake", "turtle", "unicorn", "vulture", "whale", "xylophone", "yak", "zebra"]
+    words = ["apple", "banana", "cat", "dog", "elephant", "frog", "giraffe", "horse", "iguana", "jellyfish", "kangaroo", "lion", "monkey", "noodle", "octopus", "penguin", "quail", "rabbit", "snake", "turtle", "unicorn", "vulture", "whale", "xylophone", "yak", "zebra", "worm"]
     sentence = " ".join(random.sample(words, 3))
     return sentence.capitalize()
 
