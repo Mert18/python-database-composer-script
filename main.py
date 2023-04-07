@@ -15,6 +15,29 @@ def generate_random_sentence():
 def generate_random_difficulty():
     return random.randint(1, 5)
 
+def generate_random_level():
+    return random.randint(1, 10)
+
+LEVEL_WEIGHT = 0.4
+DIFFICULTY_WEIGHT = 0.6
+
+
+def calculate_hours(level, difficulty):
+   
+    # level's weight is %25
+    level_factor = (11 - level) / 10 * 0.25
+    # difficulty's weight is %75
+    diff_factor = (6 - difficulty) / 5 * 0.75
+
+    
+
+    # total factor
+    total_factor = level_factor + diff_factor
+    # calculate the result
+    result = rand_num * total_factor
+    result = round(result) + 1
+    return result
+
 # connection for database
 conn = None
 try:
@@ -31,10 +54,11 @@ try:
        # get the data from the API
        url = 'https://randomuser.me/api/'
        response = requests.get(url)
+       level = generate_random_level()
        if response.status_code == 200:
           people = response.json()['results'][0]
           # \" preserves the uppercase letters and required.
-          cur.execute('INSERT INTO users(name, email, password) VALUES(%s, %s, %s)', (people['name']['first'] + " " + people['name']['last'], people['email'], people["login"]["md5"]))
+          cur.execute('INSERT INTO users(name, email, password, level) VALUES(%s, %s, %s, %s)', (people['name']['first'] + " " + people['name']['last'], people['email'], people["login"]["md5"], level))
  
     # Populate "tasks" table with random names and difficulty, and assigneeId from "users" table.
     for i in range(200):
@@ -64,8 +88,13 @@ try:
             date_format = '%Y-%m-%dT%H:%M:%S.%f%z'
             date1 = datetime.strptime(random_row[2], date_format)
 
+            cur.execute('SELECT level FROM users WHERE id=%s;', (task[3],))
+            user = cur.fetchone()
+            level = user[0]
+            # TODO - add the level of the user to the task difficulty
             # Generate a random number of hours to complete the task: SENSIVITY OF THE DATA to generate the completed_date
-            hours_to_complete = random.randint(task[10] + 4, task[10]*10 + 5)
+            difficulty = task[10]
+            hours_to_complete = calculate_hours(level, difficulty)
             completed_date = date1 + timedelta(hours=hours_to_complete)
 
             # get the difference in hours - how many hours did it take?
@@ -73,7 +102,7 @@ try:
             hours = delta.total_seconds() // 3600
 
             # insert into completed_tasks 
-            cur.execute('INSERT INTO completed_tasks(task_id, user_id, started_date, completed_date, hours) VALUES(%s, %s, %s, %s, %s);', (task[0], task[3], date1, completed_date, hours))
+            cur.execute('INSERT INTO completed_tasks(task_id, user_id, started_date, completed_date, user_level, task_difficulty, hours) VALUES(%s, %s, %s, %s, %s, %s, %s);', (task[0], task[3], date1, completed_date, level, difficulty, hours))
 
             # update the task status to done
             cur.execute('UPDATE tasks SET status = \'done\' WHERE id = %s;', (task[0],))
