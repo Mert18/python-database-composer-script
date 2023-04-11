@@ -4,6 +4,7 @@ import requests
 import random
 import csv
 from datetime import datetime, timedelta
+import math
 
 # for task name
 def generate_random_sentence():
@@ -13,30 +14,17 @@ def generate_random_sentence():
 
 # for task difficulty
 def generate_random_difficulty():
-    return random.randint(1, 5)
+    return random.randint(1, 10)
 
 def generate_random_level():
     return random.randint(1, 10)
 
-LEVEL_WEIGHT = 0.4
-DIFFICULTY_WEIGHT = 0.6
-
-
 def calculate_hours(level, difficulty):
-   
-    # level's weight is %25
-    level_factor = (11 - level) / 10 * 0.25
-    # difficulty's weight is %75
-    diff_factor = (6 - difficulty) / 5 * 0.75
-
-    
-
-    # total factor
-    total_factor = level_factor + diff_factor
-    # calculate the result
-    result = rand_num * total_factor
-    result = round(result) + 1
-    return result
+    difficultyFactor = round(math.sqrt(difficulty*difficulty*difficulty))
+    levelFactor = 32 - round(math.sqrt(level*level*level))
+    average = round((difficultyFactor + levelFactor) / 2)
+    randomFactor = random.randint(-3, 3)
+    return average + randomFactor + 3
 
 # connection for database
 conn = None
