@@ -2,7 +2,6 @@ import psycopg2
 from config import config
 import requests
 import random
-import csv
 from datetime import datetime, timedelta
 import math
 
@@ -21,7 +20,7 @@ def generate_random_level():
 
 def calculate_hours(level, difficulty):
     difficultyFactor = round(math.sqrt(difficulty*difficulty*difficulty))
-    levelFactor = 32 - round(math.sqrt(level*level*level))
+    levelFactor = 32 - round(math.sqrt(level*level*level))  
     average = round((difficultyFactor + levelFactor) / 2)
     randomFactor = random.randint(-3, 3)
     return average + randomFactor + 3
@@ -49,51 +48,41 @@ try:
           cur.execute('INSERT INTO users(name, email, password, level) VALUES(%s, %s, %s, %s)', (people['name']['first'] + " " + people['name']['last'], people['email'], people["login"]["md5"], level))
  
     # Populate "tasks" table with random names and difficulty, and assigneeId from "users" table.
-    for i in range(200):
+    for i in range(1000):
         cur.execute('SELECT * FROM users ORDER BY RANDOM() LIMIT 1;')
         user = cur.fetchone()
         cur.execute('INSERT INTO tasks(name, difficulty, \"assigneeId\") VALUES(%s, %s, %s);', (generate_random_sentence(), generate_random_difficulty(), user[0]))
     
 
     # Populate "completed_tasks" table
-    for i in range(200):
+    for i in range(1000):
         cur.execute('SELECT * FROM tasks WHERE status != \'done\' ORDER BY RANDOM() LIMIT 1;')
         task = cur.fetchone()
         if(task == None):
             break
         
-        with open('./data/task_data.csv', 'r') as file:
-        # Create a csv reader object
-            reader = csv.reader(file)
+        # started date
+        date_format = '%Y-%m-%dT%H:%M:%S.%f%z'
+        
+        date1 = datetime.now()
+        cur.execute('SELECT level FROM users WHERE id=%s;', (task[3],))
+        user = cur.fetchone()
+        level = user[0]
 
-            # Get a random row from the csv file
-            rows = list(reader)
-            total_rows = len(rows)
-            random_index = random.randint(1, total_rows - 2)
-            random_row = rows[random_index]
+        # Generate a random number of hours to complete the task: SENSIVITY OF THE DATA to generate the completed_date
+        difficulty = task[10]
+        hours_to_complete = calculate_hours(level, difficulty)
+        completed_date = date1 + timedelta(hours=hours_to_complete)
 
-            # started date
-            date_format = '%Y-%m-%dT%H:%M:%S.%f%z'
-            date1 = datetime.strptime(random_row[2], date_format)
+        # get the difference in hours - how many hours did it take?
+        delta = completed_date - date1
+        hours = delta.total_seconds() // 3600
 
-            cur.execute('SELECT level FROM users WHERE id=%s;', (task[3],))
-            user = cur.fetchone()
-            level = user[0]
-            # TODO - add the level of the user to the task difficulty
-            # Generate a random number of hours to complete the task: SENSIVITY OF THE DATA to generate the completed_date
-            difficulty = task[10]
-            hours_to_complete = calculate_hours(level, difficulty)
-            completed_date = date1 + timedelta(hours=hours_to_complete)
+        # insert into completed_tasks 
+        cur.execute('INSERT INTO completed_tasks(task_id, user_id, started_date, completed_date, user_level, task_difficulty, hours) VALUES(%s, %s, %s, %s, %s, %s, %s);', (task[0], task[3], date1, completed_date, level, difficulty, hours))
 
-            # get the difference in hours - how many hours did it take?
-            delta = completed_date - date1
-            hours = delta.total_seconds() // 3600
-
-            # insert into completed_tasks 
-            cur.execute('INSERT INTO completed_tasks(task_id, user_id, started_date, completed_date, user_level, task_difficulty, hours) VALUES(%s, %s, %s, %s, %s, %s, %s);', (task[0], task[3], date1, completed_date, level, difficulty, hours))
-
-            # update the task status to done
-            cur.execute('UPDATE tasks SET status = \'done\' WHERE id = %s;', (task[0],))
+        # update the task status to done
+        cur.execute('UPDATE tasks SET status = \'done\' WHERE id = %s;', (task[0],))
 
     # commit the changes to the database
     conn.commit()
